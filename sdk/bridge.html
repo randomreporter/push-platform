@@ -69,7 +69,7 @@
 <body>
     <div class="card" id="ui" style="display: none;">
         <h2>Enable Notifications</h2>
-        <p>Stay updated with our latest news and announcements.</p>
+        <p id="desc">Stay updated with our latest news and announcements.</p>
         <button class="btn" id="allowBtn">Allow Notifications</button>
         <div id="msg"></div>
     </div>
@@ -185,6 +185,8 @@
             }
 
             if (mode === 'popup') {
+                const originHost = params.get('origin') || 'this website';
+                document.getElementById('desc').innerHTML = `You are subscribing to notifications from <b>${originHost}</b>.<br><br><span style="font-size: 11px; color:#94a3b8;">Due to browser security policies for embedded sites, this permission must be processed via our push-platform proxy window.</span>`;
                 document.getElementById('ui').style.display = 'block';
                 document.getElementById('allowBtn').addEventListener('click', () => {
                     Notification.requestPermission().then(perm => {

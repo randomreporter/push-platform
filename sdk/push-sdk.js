@@ -118,7 +118,7 @@
 
     // ─── Permission Prompt ───────────────────────────────────────────────────────
     function openBridgePopup(vapidPublicKey) {
-        const popupUrl = `${apiUrl}/sdk/bridge.html?mode=popup&siteId=${siteId}&sdkToken=${sdkToken}&vapidPublicKey=${encodeURIComponent(vapidPublicKey)}`;
+        const popupUrl = `${apiUrl}/sdk/bridge.html?mode=popup&siteId=${siteId}&sdkToken=${sdkToken}&vapidPublicKey=${encodeURIComponent(vapidPublicKey)}&origin=${encodeURIComponent(window.location.hostname)}`;
         const w = 450; const h = 500;
         const left = (screen.width - w) / 2;
         const top = (screen.height - h) / 2;

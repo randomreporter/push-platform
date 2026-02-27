@@ -64,12 +64,16 @@ self.addEventListener('notificationclick', function (event) {
 
         // Open target URL
         if (url) {
+            let finalUrl = url;
+            if (!url.startsWith('http')) {
+                finalUrl = 'https://' + url;
+            }
             const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
-            const existing = allClients.find(c => c.url === url && 'focus' in c);
+            const existing = allClients.find(c => c.url === finalUrl && 'focus' in c);
             if (existing) {
                 await existing.focus();
             } else {
-                await clients.openWindow(url);
+                await clients.openWindow(finalUrl);
             }
         }
     })());
