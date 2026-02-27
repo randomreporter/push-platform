@@ -83,12 +83,17 @@ router.delete('/:id', async (req, res, next) => {
 
 function generateEmbedCode(site) {
     const appUrl = process.env.APP_URL || 'http://localhost:3001';
-    return `<script>
+    const promptMode = site.promptMode || 'custom';
+    const promptDelayMs = site.promptDelayMs || 3000;
+    return `<!-- PushPlatform: paste before </head> on your website -->
+<script>
   (function() {
     window.PushPlatformConfig = {
       siteId: ${site.id},
       apiUrl: '${appUrl}',
-      sdkToken: '${site.sdkToken}'
+      sdkToken: '${site.sdkToken}',
+      promptMode: '${promptMode}',
+      promptDelayMs: ${promptDelayMs}
     };
     var s = document.createElement('script');
     s.src = '${appUrl}/sdk/push-sdk.js';

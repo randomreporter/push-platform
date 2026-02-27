@@ -8,7 +8,7 @@ export default function Sites() {
     const [showForm, setShowForm] = useState(false);
     const [selectedSite, setSelectedSite] = useState(null);
     const [embedCode, setEmbedCode] = useState('');
-    const [form, setForm] = useState({ name: '', domain: '', defaultIconUrl: '', promptMode: 'native', promptDelayMs: 3000 });
+    const [form, setForm] = useState({ name: '', domain: '', defaultIconUrl: '', promptMode: 'custom', promptDelayMs: 3000 });
     const [error, setError] = useState('');
     const [saving, setSaving] = useState(false);
 
