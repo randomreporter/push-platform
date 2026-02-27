@@ -97,15 +97,15 @@ app.use('/api/admin/subscribers', adminRateLimiter, requireAuth, adminSubscriber
 app.use('/api/admin/analytics', adminRateLimiter, requireAuth, adminAnalyticsRouter);
 app.use('/api/admin/webhooks', adminRateLimiter, requireAuth, adminWebhooksRouter);
 
-// SPA fallback in production
+// Health check — MUST be before the SPA wildcard fallback
+app.get('/health', (req, res) => res.json({ status: 'ok', version: '1.1.0' }));
+
+// SPA fallback in production (catch-all — must be last)
 if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../../admin/dist/index.html'));
   });
 }
-
-// Health check
-app.get('/health', (req, res) => res.json({ status: 'ok', version: '1.1.0' }));
 
 // Global error handler
 app.use((err, req, res, _next) => {

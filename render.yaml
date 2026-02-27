@@ -10,10 +10,7 @@ services:
     rootDir: .
 
     # Build: install all deps, build the React admin, generate Prisma client, push DB schema
-    buildCommand: |
-      cd server && npm install
-      cd ../admin && npm install && npm run build
-      cd ../server && npx prisma generate && npx prisma db push
+    buildCommand: "cd server && npm install && cd ../admin && npm install && npm run build && cd ../server && npx prisma generate && npx prisma db push"
 
     # Start the Express server
     startCommand: node server/src/index.js
