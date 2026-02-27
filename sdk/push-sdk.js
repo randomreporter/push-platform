@@ -117,13 +117,25 @@
     }
 
     // ─── Permission Prompt ───────────────────────────────────────────────────────
-    function requestPermission(vapidPublicKey) {
-        Notification.requestPermission().then(async (perm) => {
-            if (perm === 'granted') {
-                await registerSubscription(vapidPublicKey);
-                removeWidget();
-            }
-        });
+    function openBridgePopup(vapidPublicKey) {
+        const popupUrl = `${apiUrl}/sdk/bridge.html?mode=popup&siteId=${siteId}&sdkToken=${sdkToken}&vapidPublicKey=${encodeURIComponent(vapidPublicKey)}`;
+        const w = 400; const h = 450;
+        const left = (window.screen.width / 2) - (w / 2);
+        const top = (window.screen.height / 2) - (h / 2);
+        window.open(popupUrl, 'PushPlatform', `width=${w},height=${h},top=${top},left=${left}`);
+    }
+
+    function requestPermission(vapidPublicKey, isCrossOrigin) {
+        if (isCrossOrigin) {
+            openBridgePopup(vapidPublicKey);
+        } else {
+            Notification.requestPermission().then(async (perm) => {
+                if (perm === 'granted') {
+                    await registerSubscription(vapidPublicKey);
+                    removeWidget();
+                }
+            });
+        }
     }
 
     async function init() {
@@ -132,6 +144,41 @@
         const vapidPublicKey = siteConfig.vapid_public_key;
         const mode = promptMode || siteConfig.prompt_mode || 'native';
         const delayMs = promptDelayMs || siteConfig.prompt_delay_ms || 3000;
+
+        const isCrossOrigin = window.location.origin !== new URL(apiUrl).origin;
+
+        // Listen for messages from popup or iframe
+        window.addEventListener('message', (event) => {
+            if (!event.data) return;
+            if (event.data.type === 'PUSH_PLATFORM_REGISTER_SUCCESS') {
+                try { localStorage.setItem('pp_endpoint', event.data.endpoint); } catch { }
+                removeWidget();
+            } else if (event.data.type === 'PUSH_PLATFORM_BRIDGE_READY') {
+                // If not already subscribed, show prompt
+                if (mode === 'native') {
+                    // For cross-origin, browsers block popup automatically if no user gesture. We fallback to bell widget.
+                    setTimeout(() => showBellWidget(vapidPublicKey, isCrossOrigin), delayMs);
+                } else {
+                    setTimeout(() => showBellWidget(vapidPublicKey, isCrossOrigin), delayMs);
+                }
+            } else if (event.data.type === 'PUSH_PLATFORM_REGISTER_ERROR') {
+                console.error('[PushPlatform]', event.data.error);
+            }
+        });
+
+        if (isCrossOrigin) {
+            // Check silently first
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = `${apiUrl}/sdk/bridge.html?mode=iframe&siteId=${siteId}&sdkToken=${sdkToken}&vapidPublicKey=${encodeURIComponent(vapidPublicKey)}`;
+            document.body.appendChild(iframe);
+            return;
+        }
+
+        if (!('Notification' in window)) {
+            console.warn('[PushPlatform] Notifications are not supported by this browser or not running in a secure context (HTTPS).');
+            return;
+        }
 
         // If already granted — silently re-register (catch endpoint changes)
         if (Notification.permission === 'granted') {
@@ -142,14 +189,14 @@
         if (Notification.permission === 'denied') return;
 
         if (mode === 'native') {
-            setTimeout(() => requestPermission(vapidPublicKey), delayMs);
+            setTimeout(() => requestPermission(vapidPublicKey, false), delayMs);
         } else {
-            setTimeout(() => showBellWidget(vapidPublicKey), delayMs);
+            setTimeout(() => showBellWidget(vapidPublicKey, false), delayMs);
         }
     }
 
     // ─── Custom Bell Widget ──────────────────────────────────────────────────────
-    function showBellWidget(vapidPublicKey) {
+    function showBellWidget(vapidPublicKey, isCrossOrigin) {
         if (document.getElementById('pp-widget')) return;
 
         const style = document.createElement('style');
@@ -176,7 +223,7 @@
     `;
         document.body.appendChild(widget);
 
-        document.getElementById('pp-allow').addEventListener('click', () => requestPermission(vapidPublicKey));
+        document.getElementById('pp-allow').addEventListener('click', () => requestPermission(vapidPublicKey, isCrossOrigin));
         document.getElementById('pp-dismiss').addEventListener('click', removeWidget);
     }
 

@@ -34,7 +34,11 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Security & Body Parsing
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: false, // Allow SDK to be loaded cross-origin
+  xFrameOptions: false // Allow bridge.html to be used in cross-origin iframes
+}));
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -63,8 +67,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve SDK files — must set Service-Worker-Allowed header so SW can control wider scope
+// Serve SDK files
 app.use('/sdk', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   if (req.path.endsWith('sw.js')) {
     res.setHeader('Service-Worker-Allowed', '/');
   }

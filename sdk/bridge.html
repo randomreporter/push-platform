@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Stay Updated</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background: #f8fafc;
+        }
+
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #1e293b;
+            font-size: 20px;
+        }
+
+        p {
+            color: #64748b;
+            margin-bottom: 1.5rem;
+            font-size: 14px;
+        }
+
+        .btn {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background: #4f46e5;
+        }
+
+        .btn:disabled {
+            background: #a5b4fc;
+            cursor: not-allowed;
+        }
+
+        #msg {
+            color: #ef4444;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card" id="ui" style="display: none;">
+        <h2>Enable Notifications</h2>
+        <p>Stay updated with our latest news and announcements.</p>
+        <button class="btn" id="allowBtn">Allow Notifications</button>
+        <div id="msg"></div>
+    </div>
+    <script>
+        // ─── Utility ────────────────────────────────────────────────────────────────
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const raw = window.atob(base64);
+            return new Uint8Array([...raw].map(c => c.charCodeAt(0)));
+        }
+
+        function detectBrowser(ua) {
+            if (/Edg\//.test(ua)) return 'Edge';
+            if (/OPR\/|Opera\//.test(ua)) return 'Opera';
+            if (/Firefox\//.test(ua)) return 'Firefox';
+            if (/Chrome\//.test(ua)) return 'Chrome';
+            if (/Safari\//.test(ua)) return 'Safari';
+            return 'Unknown';
+        }
+        function detectOS(ua) {
+            if (/Windows/.test(ua)) return 'Windows';
+            if (/Android/.test(ua)) return 'Android';
+            if (/iPhone|iPad/.test(ua)) return 'iOS';
+            if (/Mac/.test(ua)) return 'macOS';
+            if (/Linux/.test(ua)) return 'Linux';
+            return 'Unknown';
+        }
+
+        const params = new URLSearchParams(window.location.search);
+        const mode = params.get('mode') || 'iframe';
+        const siteId = params.get('siteId');
+        const sdkToken = params.get('sdkToken');
+        const vapidPublicKey = params.get('vapidPublicKey');
+
+        // apiUrl is the origin of this bridge.html
+        const apiUrl = window.location.origin;
+
+        async function registerAndSubscribe() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                throw new Error('Push API not supported in this browser.');
+            }
+
+            const swUrl = `${apiUrl}/sdk/sw.js`;
+            let reg = await navigator.serviceWorker.register(swUrl, { scope: '/' });
+            await navigator.serviceWorker.ready;
+
+            let subscription = await reg.pushManager.getSubscription();
+            if (!subscription) {
+                subscription = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+                });
+            }
+
+            // Send to backend
+            const subJson = subscription.toJSON();
+            const ua = navigator.userAgent;
+            const res = await fetch(apiUrl + '/api/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Site-Token': sdkToken },
+                body: JSON.stringify({
+                    endpoint: subJson.endpoint,
+                    p256dh: subJson.keys.p256dh,
+                    auth: subJson.keys.auth,
+                    browser: detectBrowser(ua),
+                    os: detectOS(ua),
+                    site_id: Number(siteId),
+                }),
+                credentials: 'omit',
+            });
+
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({}));
+                throw new Error(`API error ${res.status}: ${body.message || 'Unknown'}`);
+            }
+
+            return subJson.endpoint;
+        }
+
+        async function handleAction() {
+            try {
+                const endpoint = await registerAndSubscribe();
+                sendSuccess(endpoint);
+            } catch (err) {
+                sendError(err.message);
+            }
+        }
+
+        function sendSuccess(endpoint) {
+            if (mode === 'popup') {
+                if (window.opener) {
+                    window.opener.postMessage({ type: 'PUSH_PLATFORM_REGISTER_SUCCESS', endpoint }, '*');
+                }
+                setTimeout(() => window.close(), 500);
+            } else {
+                window.parent.postMessage({ type: 'PUSH_PLATFORM_REGISTER_SUCCESS', endpoint }, '*');
+            }
+        }
+
+        function sendError(errorMsg) {
+            if (mode === 'popup') {
+                document.getElementById('msg').innerHTML = errorMsg + ' <button onclick="window.close()" style="margin-left: 10px; cursor: pointer;">Close</button>';
+            } else {
+                window.parent.postMessage({ type: 'PUSH_PLATFORM_REGISTER_ERROR', error: errorMsg }, '*');
+            }
+        }
+
+        async function init() {
+            if (!vapidPublicKey || !siteId || !sdkToken) {
+                sendError('Missing required configuration parameters.');
+                return;
+            }
+
+            if (mode === 'popup') {
+                document.getElementById('ui').style.display = 'block';
+                document.getElementById('allowBtn').addEventListener('click', () => {
+                    Notification.requestPermission().then(perm => {
+                        if (perm === 'granted') {
+                            const btn = document.getElementById('allowBtn');
+                            btn.innerText = 'Subscribing...';
+                            btn.disabled = true;
+                            handleAction();
+                        } else {
+                            sendError('Permission denied by user.');
+                        }
+                    });
+                });
+                // If already granted, auto-subscribe
+                if (Notification.permission === 'granted') {
+                    const btn = document.getElementById('allowBtn');
+                    btn.innerText = 'Subscribing...';
+                    btn.disabled = true;
+                    handleAction();
+                }
+            }
+            else if (mode === 'iframe') {
+                // Only try if already granted
+                if (Notification.permission === 'granted') {
+                    handleAction();
+                } else {
+                    // Not granted, tell parent we are ready but inactive
+                    window.parent.postMessage({ type: 'PUSH_PLATFORM_BRIDGE_READY' }, '*');
+                }
+            }
+        }
+
+        init();
+    </script>
+</body>
+
+</html>
