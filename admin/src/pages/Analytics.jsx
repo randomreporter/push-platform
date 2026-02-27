@@ -7,10 +7,18 @@ const COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'
 export default function Analytics() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [sites, setSites] = useState([]);
+    const [siteId, setSiteId] = useState('');
 
     useEffect(() => {
-        API.get('/api/admin/analytics/overview').then(({ data }) => setData(data)).catch(console.error).finally(() => setLoading(false));
+        API.get('/api/admin/sites').then(({ data }) => setSites(data.sites || [])).catch(console.error);
     }, []);
+
+    useEffect(() => {
+        setLoading(true);
+        const params = siteId ? `?site_id=${siteId}` : '';
+        API.get(`/api/admin/analytics/overview${params}`).then(({ data }) => setData(data)).catch(console.error).finally(() => setLoading(false));
+    }, [siteId]);
 
     if (loading) return <div className="spinner" />;
 
@@ -24,7 +32,20 @@ export default function Analytics() {
 
     return (
         <>
-            <div className="page-header"><h1>Analytics</h1></div>
+            <div className="page-header">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingBottom: 16 }}>
+                    <h1>Analytics</h1>
+                    <select
+                        className="form-select"
+                        style={{ width: 250, background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}
+                        value={siteId}
+                        onChange={e => setSiteId(e.target.value)}
+                    >
+                        <option value="">All Sites</option>
+                        {sites.map(s => <option key={s.id} value={s.id}>{s.name} ({s.domain})</option>)}
+                    </select>
+                </div>
+            </div>
             <div className="page-body">
                 {/* Summary Cards */}
                 <div className="grid-3" style={{ marginBottom: 24 }}>

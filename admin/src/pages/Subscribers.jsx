@@ -9,6 +9,7 @@ export default function Subscribers() {
     const [filters, setFilters] = useState({ site_id: '', browser: '', os: '', country: '', status: '' });
     const [loading, setLoading] = useState(true);
     const [lastRefreshed, setLastRefreshed] = useState(null);
+    const [sites, setSites] = useState([]);
 
     const load = useCallback((p = page, f = filters) => {
         const params = new URLSearchParams({
@@ -27,7 +28,10 @@ export default function Subscribers() {
     }, []);
 
     // Initial load
-    useEffect(() => { load(1, filters); }, []);
+    useEffect(() => {
+        load(1, filters);
+        API.get('/api/admin/sites').then(({ data }) => setSites(data.sites || [])).catch(console.error);
+    }, []);
 
     // Auto-refresh every 15 seconds
     useEffect(() => {
@@ -89,6 +93,13 @@ export default function Subscribers() {
                 <div className="card" style={{ marginBottom: 16, padding: 16 }}>
                     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                         <Filter size={16} style={{ color: 'var(--text-muted)', marginTop: 'auto', marginBottom: 6 }} />
+                        <div className="form-group" style={{ minWidth: 160 }}>
+                            <label className="form-label">Site</label>
+                            <select className="form-select" value={filters.site_id} onChange={e => setF('site_id', e.target.value)}>
+                                <option value="">All Sites</option>
+                                {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </select>
+                        </div>
                         {[['browser', 'Browser'], ['os', 'OS'], ['country', 'Country (2-letter)'], ['status', 'Status']].map(([k, label]) => (
                             <div key={k} className="form-group" style={{ minWidth: 140 }}>
                                 <label className="form-label">{label}</label>
