@@ -1,0 +1,13 @@
+{
+    "name": "push-platform",
+    "version": "1.0.0",
+    "description": "Self-hosted web push notification platform",
+    "engines": {
+        "node": ">=20.0.0",
+        "npm": ">=9.0.0"
+    },
+    "scripts": {
+        "build": "cd server && npm install && cd ../admin && npm install && npm run build && cd ../server && npx prisma generate && npx prisma db push",
+        "start": "node server/src/index.js"
+    }
+}
