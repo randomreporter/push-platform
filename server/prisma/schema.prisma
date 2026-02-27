@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("admin") // admin | site_manager
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Site {
+  id                 Int          @id @default(autoincrement())
+  name               String
+  domain             String       @unique
+  vapidPublicKey     String
+  vapidPrivateKeyEnc String
+  defaultIconUrl     String?
+  defaultBadgeUrl    String?
+  sdkToken           String       @unique
+  promptMode         String       @default("native") // native | custom
+  promptDelayMs      Int          @default(3000)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  subscribers  Subscriber[]
+  campaigns    Campaign[]
+  webhooks     Webhook[]
+}
+
+model Subscriber {
+  id           Int          @id @default(autoincrement())
+  siteId       Int
+  endpoint     String
+  endpointHash String       @unique
+  p256dh       String
+  auth         String
+  browser      String?
+  os           String?
+  country      String?
+  tags         String       @default("{}") // JSON string
+  status       String       @default("active") // active | unsubscribed
+  lastSeenAt   DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  site         Site         @relation(fields: [siteId], references: [id])
+  campaignLogs CampaignLog[]
+}
+
+model Campaign {
+  id             Int          @id @default(autoincrement())
+  siteId         Int
+  title          String
+  body           String
+  iconUrl        String?
+  badgeUrl       String?
+  imageUrl       String?
+  targetUrl      String
+  segmentFilters String?      // JSON string
+  status         String       @default("draft") // draft | scheduled | dispatching | completed | failed
+  scheduledAt    DateTime?
+  dispatchedAt   DateTime?
+  completedAt    DateTime?
+  targetedCount  Int          @default(0)
+  sentCount      Int          @default(0)
+  deliveredCount Int          @default(0)
+  failedCount    Int          @default(0)
+  clickedCount   Int          @default(0)
+  dismissedCount Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  site         Site         @relation(fields: [siteId], references: [id])
+  campaignLogs CampaignLog[]
+}
+
+model CampaignLog {
+  id           Int        @id @default(autoincrement())
+  campaignId   Int
+  subscriberId Int?
+  eventType    String     // sent | delivered | failed | clicked | dismissed | unsubscribed
+  httpStatus   Int?
+  errorDetail  String?
+  createdAt    DateTime   @default(now())
+
+  campaign     Campaign   @relation(fields: [campaignId], references: [id])
+  subscriber   Subscriber? @relation(fields: [subscriberId], references: [id])
+}
+
+model Webhook {
+  id          Int      @id @default(autoincrement())
+  siteId      Int
+  targetUrl   String
+  secretToken String
+  events      String   // JSON array string
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  site        Site     @relation(fields: [siteId], references: [id])
+  deliveries  WebhookDelivery[]
+}
+
+model WebhookDelivery {
+  id         Int      @id @default(autoincrement())
+  webhookId  Int
+  eventName  String
+  payload    String   // JSON
+  httpStatus Int?
+  response   String?
+  attempt    Int      @default(1)
+  status     String   @default("pending") // pending | success | failed
+  createdAt  DateTime @default(now())
+
+  webhook    Webhook  @relation(fields: [webhookId], references: [id])
+}

@@ -1,0 +1,88 @@
+services:
+  # ── Web Service (Node.js — serves Express API + React Admin SPA) ──────────
+  - type: web
+    name: push-platform
+    runtime: node
+    region: oregon       # closest free region; change to frankfurt for EU
+    plan: free
+
+    # Root of the repo where server lives
+    rootDir: .
+
+    # Build: install all deps, build the React admin, generate Prisma client, push DB schema
+    buildCommand: |
+      cd server && npm install
+      cd ../admin && npm install && npm run build
+      cd ../server && npx prisma generate && npx prisma db push
+
+    # Start the Express server
+    startCommand: node server/src/index.js
+
+    # Render injects PORT automatically; we just need to set the rest
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      - key: APP_URL
+        value: https://push-platform.onrender.com   # ← update after first deploy
+
+      - key: SESSION_SECRET
+        generateValue: true      # Render generates a secure random value
+
+      - key: JWT_SECRET
+        generateValue: true
+
+      - key: VAPID_ENCRYPTION_KEY
+        value: REPLACE_WITH_YOUR_64_CHAR_HEX   # generate: openssl rand -hex 32
+
+      - key: DATABASE_URL
+        value: file:./dev.db    # SQLite stored on Render disk
+
+      - key: APP_INSTALLED
+        value: "false"          # set to "true" after setup wizard completes
+
+      - key: GEOIP_DRIVER
+        value: geoip-lite
+
+      # Redis — auto-populated from the redis service below
+      - key: REDIS_HOST
+        fromService:
+          name: push-platform-redis
+          type: redis
+          property: host
+
+      - key: REDIS_PORT
+        fromService:
+          name: push-platform-redis
+          type: redis
+          property: port
+
+      - key: REDIS_PASSWORD
+        fromService:
+          name: push-platform-redis
+          type: redis
+          property: password
+
+      # Mail (optional — leave empty to skip email alerts)
+      - key: MAIL_HOST
+        value: ""
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_USER
+        value: ""
+      - key: MAIL_PASS
+        value: ""
+      - key: MAIL_FROM
+        value: ""
+      - key: ADMIN_ALERT_EMAIL
+        value: ""
+
+    # Health check so Render knows when the service is ready
+    healthCheckPath: /health
+
+  # ── Free Redis instance (used by BullMQ queues + rate limiter) ────────────
+  - type: redis
+    name: push-platform-redis
+    plan: free
+    region: oregon
+    maxmemoryPolicy: noeviction

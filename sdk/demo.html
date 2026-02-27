@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PushPlatform — Demo Test Page</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0b0f1a;
+      color: #f1f5f9;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: #131929;
+      border: 1px solid #1e2d45;
+      border-radius: 14px;
+      padding: 36px;
+      max-width: 540px;
+      width: 100%;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    p {
+      color: #94a3b8;
+      font-size: 14px;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      margin-right: 8px;
+      margin-bottom: 8px;
+    }
+
+    .btn-primary {
+      background: #6366f1;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #818cf8;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: #94a3b8;
+      border: 1px solid #1e2d45;
+    }
+
+    .btn-secondary:hover {
+      background: #1a2340;
+      color: #f1f5f9;
+    }
+
+    .status {
+      background: #0b0f1a;
+      border: 1px solid #1e2d45;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 12px;
+      color: #6366f1;
+      font-family: monospace;
+      margin-top: 16px;
+      min-height: 60px;
+      line-height: 1.7;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+
+    .badge-ok {
+      background: rgba(34, 197, 94, 0.12);
+      color: #22c55e;
+    }
+
+    .badge-err {
+      background: rgba(239, 68, 68, 0.12);
+      color: #ef4444;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h1>🔔 PushPlatform Demo</h1>
+    <p>Use this page to test the push subscription flow. Open the Admin Dashboard to create a site and get your
+      <code>siteId</code> and <code>sdkToken</code>, then paste them below.</p>
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+      <label style="font-size:13px;color:#94a3b8;">Site ID</label>
+      <input id="inp-siteid" type="number" value="1"
+        style="background:#0b0f1a;border:1px solid #1e2d45;border-radius:6px;padding:8px 12px;color:#f1f5f9;font-size:13px;outline:none;width:100%" />
+      <label style="font-size:13px;color:#94a3b8;">SDK Token</label>
+      <input id="inp-token" type="text" placeholder="Paste your sdkToken here"
+        style="background:#0b0f1a;border:1px solid #1e2d45;border-radius:6px;padding:8px 12px;color:#f1f5f9;font-size:13px;outline:none;width:100%" />
+    </div>
+
+    <button class="btn btn-primary" onclick="initSDK()">🚀 Load SDK & Subscribe</button>
+    <button class="btn btn-secondary" onclick="setDemoTag()">🏷 Set Tag (plan=pro)</button>
+    <button class="btn btn-secondary" onclick="unsubscribe()">🔕 Unsubscribe</button>
+
+    <div class="status" id="log">Waiting for action…</div>
+  </div>
+
+  <script>
+    function log(msg, ok = true) {
+      const el = document.getElementById('log');
+      const time = new Date().toLocaleTimeString();
+      el.innerHTML += `\n[${time}] ${msg}`;
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function initSDK() {
+      const siteId = document.getElementById('inp-siteid').value;
+      const sdkToken = document.getElementById('inp-token').value;
+      if (!sdkToken) { log('❌ Please enter your SDK token'); return; }
+
+      // Auto-detect: use whatever origin the demo page was served from
+      const apiUrl = window.location.origin;
+      log('🔗 Using API: ' + apiUrl);
+
+      window.PushPlatformConfig = { siteId: Number(siteId), apiUrl, sdkToken, promptMode: 'native', promptDelayMs: 500 };
+      const s = document.createElement('script');
+      s.src = apiUrl + '/sdk/push-sdk.js';
+      s.onload = () => log('✅ SDK loaded. Permission prompt will appear shortly…');
+      s.onerror = () => log('❌ Failed to load SDK. Is the server running?');
+      document.head.appendChild(s);
+    }
+
+    function setDemoTag() {
+      if (!window.pushPlatform) { log('❌ SDK not loaded yet.'); return; }
+      window.pushPlatform.setTag('plan', 'pro').then(() => log('✅ Tag set: plan=pro'));
+    }
+
+    function unsubscribe() {
+      if (!window.pushPlatform) { log('❌ SDK not loaded yet.'); return; }
+      window.pushPlatform.unsubscribe().then(() => log('✅ Unsubscribed from push notifications.'));
+    }
+  </script>
+</body>
+
+</html>
