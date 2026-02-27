@@ -80,12 +80,32 @@ export default function Sites() {
                 {embedCode && (
                     <div className="card" style={{ marginBottom: 20, borderColor: 'var(--accent)' }}>
                         <div className="card-header">
-                            <h3>📋 Embed Code — {selectedSite?.name}</h3>
-                            <button className="btn btn-ghost btn-sm" onClick={() => { navigator.clipboard.writeText(embedCode); }}><Copy size={13} /> Copy</button>
+                            <h3>📋 Implement Push Platform on {selectedSite?.name}</h3>
+                            <button className="btn btn-ghost btn-sm" onClick={() => setEmbedCode('')}>Close</button>
                         </div>
-                        <div className="code-block">{embedCode}</div>
-                        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 12 }}>Paste this snippet before the closing &lt;/head&gt; tag on your website.</p>
-                        <button className="btn btn-ghost btn-sm" style={{ marginTop: 10 }} onClick={() => setEmbedCode('')}>Dismiss</button>
+
+                        <div style={{ padding: '10px 0' }}>
+                            <h4 style={{ marginBottom: 8, color: 'var(--text-primary)' }}>1. Add the Global Snippet</h4>
+                            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>Paste this snippet before the closing <code>&lt;/head&gt;</code> tag on your website.</p>
+                            <div style={{ display: 'flex', gap: 10 }}>
+                                <div className="code-block" style={{ flex: 1 }}>{embedCode}</div>
+                                <button className="btn btn-ghost btn-sm" style={{ height: 'fit-content' }} onClick={() => navigator.clipboard.writeText(embedCode)}><Copy size={13} /> Copy</button>
+                            </div>
+                        </div>
+
+                        <div style={{ padding: '16px 0', marginTop: 16, borderTop: '1px solid var(--border)' }}>
+                            <h4 style={{ marginBottom: 8, color: 'var(--text-primary)' }}>2. Enable Native Prompts (Optional)</h4>
+                            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>
+                                By default, platforms like Blogger require a proxy popup to handle subscriptions.
+                                However, if you are using a <strong>custom domain</strong> (like WordPress or a standalone site), you can bypass the popup and get native browser permission prompts!
+                            </p>
+                            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>
+                                Simply download the Service Worker file and upload it to the <strong>exact root directory</strong> of your website (e.g., <code>https://{selectedSite?.domain}/sw.js</code>). The SDK will automatically detect it.
+                            </p>
+                            <a href={`${API.defaults.baseURL || ''}/sdk/sw.js`} download="sw.js" target="_blank" rel="noreferrer" className="btn btn-primary btn-sm" style={{ display: 'inline-flex', textDecoration: 'none' }}>
+                                Download sw.js
+                            </a>
+                        </div>
                     </div>
                 )}
 

@@ -44,15 +44,14 @@
         }
     }
 
-    async function registerSubscription(vapidPublicKey) {
+    async function registerSubscription(vapidPublicKey, useLocalSw) {
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
             console.warn('[PushPlatform] Push API not supported in this browser.');
             return null;
         }
 
-        // Register SW at /sdk/sw.js with explicit scope '/'.
-        // The server sends "Service-Worker-Allowed: /" so the browser permits this.
-        const swUrl = `${apiUrl}/sdk/sw.js`;
+        // Register SW. If useLocalSw is true, use the site's own sw.js
+        const swUrl = useLocalSw ? '/sw.js' : `${apiUrl}/sdk/sw.js`;
         let reg;
         try {
             reg = await navigator.serviceWorker.register(swUrl, { scope: '/' });
@@ -125,13 +124,13 @@
         window.open(popupUrl, 'PushPlatformPrompt', `scrollbars=yes,resizable=yes,status=no,location=no,toolbar=no,menubar=no,width=${w},height=${h},left=${left},top=${top}`);
     }
 
-    function requestPermission(vapidPublicKey, isCrossOrigin) {
-        if (isCrossOrigin) {
+    function requestPermission(vapidPublicKey, bridgeRequired, useLocalSw) {
+        if (bridgeRequired) {
             openBridgePopup(vapidPublicKey);
         } else {
             Notification.requestPermission().then(async (perm) => {
                 if (perm === 'granted') {
-                    await registerSubscription(vapidPublicKey);
+                    await registerSubscription(vapidPublicKey, useLocalSw);
                     removeWidget();
                 }
             });
@@ -147,6 +146,17 @@
 
         const isCrossOrigin = window.location.origin !== new URL(apiUrl).origin;
 
+        // Check if the user's custom domain is hosting sw.js at the root
+        let useLocalSw = false;
+        if (isCrossOrigin) {
+            try {
+                const res = await fetch('/sw.js', { method: 'HEAD' });
+                if (res.ok) useLocalSw = true;
+            } catch (e) { } // Network error or not found
+        }
+
+        const bridgeRequired = isCrossOrigin && !useLocalSw;
+
         // Listen for messages from popup or iframe
         window.addEventListener('message', (event) => {
             if (!event.data) return;
@@ -156,17 +166,16 @@
             } else if (event.data.type === 'PUSH_PLATFORM_BRIDGE_READY') {
                 // If not already subscribed, show prompt
                 if (mode === 'native') {
-                    // For cross-origin, browsers block popup automatically if no user gesture. We fallback to bell widget.
-                    setTimeout(() => showBellWidget(vapidPublicKey, isCrossOrigin), delayMs);
+                    setTimeout(() => showBellWidget(vapidPublicKey, bridgeRequired, useLocalSw), delayMs);
                 } else {
-                    setTimeout(() => showBellWidget(vapidPublicKey, isCrossOrigin), delayMs);
+                    setTimeout(() => showBellWidget(vapidPublicKey, bridgeRequired, useLocalSw), delayMs);
                 }
             } else if (event.data.type === 'PUSH_PLATFORM_REGISTER_ERROR') {
                 console.error('[PushPlatform]', event.data.error);
             }
         });
 
-        if (isCrossOrigin) {
+        if (bridgeRequired) {
             // Check silently first
             const iframe = document.createElement('iframe');
             iframe.style.display = 'none';
@@ -182,21 +191,21 @@
 
         // If already granted — silently re-register (catch endpoint changes)
         if (Notification.permission === 'granted') {
-            await registerSubscription(vapidPublicKey);
+            await registerSubscription(vapidPublicKey, useLocalSw);
             return;
         }
 
         if (Notification.permission === 'denied') return;
 
         if (mode === 'native') {
-            setTimeout(() => requestPermission(vapidPublicKey, false), delayMs);
+            setTimeout(() => requestPermission(vapidPublicKey, bridgeRequired, useLocalSw), delayMs);
         } else {
-            setTimeout(() => showBellWidget(vapidPublicKey, false), delayMs);
+            setTimeout(() => showBellWidget(vapidPublicKey, bridgeRequired, useLocalSw), delayMs);
         }
     }
 
     // ─── Custom Bell Widget ──────────────────────────────────────────────────────
-    function showBellWidget(vapidPublicKey, isCrossOrigin) {
+    function showBellWidget(vapidPublicKey, bridgeRequired, useLocalSw) {
         if (document.getElementById('pp-widget')) return;
 
         const style = document.createElement('style');
@@ -223,7 +232,7 @@
     `;
         document.body.appendChild(widget);
 
-        document.getElementById('pp-allow').addEventListener('click', () => requestPermission(vapidPublicKey, isCrossOrigin));
+        document.getElementById('pp-allow').addEventListener('click', () => requestPermission(vapidPublicKey, bridgeRequired, useLocalSw));
         document.getElementById('pp-dismiss').addEventListener('click', removeWidget);
     }
 
