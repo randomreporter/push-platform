@@ -7,6 +7,8 @@ export default function Campaigns() {
     const [campaigns, setCampaigns] = useState([]);
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState({}); // { [id]: true } while sending
+    const [confirmSendId, setConfirmSendId] = useState(null);
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
     const navigate = useNavigate();
 
     const load = () =>
@@ -23,8 +25,7 @@ export default function Campaigns() {
     }, []);
 
     async function handleSend(id) {
-        if (!confirm('Send this campaign now to all active subscribers?')) return;
-
+        setConfirmSendId(null);
         // Instant visual feedback — disable button and show spinner
         setSending(s => ({ ...s, [id]: true }));
         setCampaigns(prev => prev.map(c => c.id === id ? { ...c, status: 'dispatching' } : c));
@@ -45,7 +46,7 @@ export default function Campaigns() {
     }
 
     async function handleDelete(id) {
-        if (!confirm('Delete this campaign?')) return;
+        setConfirmDeleteId(null);
         await API.delete(`/api/admin/campaigns/${id}`).catch(console.error);
         load();
     }
@@ -102,7 +103,7 @@ export default function Campaigns() {
                                                         <div style={{ display: 'flex', gap: 6 }}>
                                                             <button
                                                                 className="btn btn-primary btn-sm"
-                                                                onClick={() => handleSend(c.id)}
+                                                                onClick={() => setConfirmSendId(c.id)}
                                                                 disabled={isSending}
                                                                 title="Send now to all active subscribers"
                                                             >
@@ -111,7 +112,7 @@ export default function Campaigns() {
                                                                     : <><Send size={12} /> Send</>}
                                                             </button>
                                                             <button className="btn btn-ghost btn-sm" onClick={() => navigate(`/campaigns/${c.id}/edit`)}><Edit2 size={12} /></button>
-                                                            <button className="btn btn-danger btn-sm" onClick={() => handleDelete(c.id)}><Trash2 size={12} /></button>
+                                                            <button className="btn btn-danger btn-sm" onClick={() => setConfirmDeleteId(c.id)}><Trash2 size={12} /></button>
                                                         </div>
                                                     )}
                                                     {c.status === 'dispatching' && (
@@ -132,9 +133,44 @@ export default function Campaigns() {
                     </div>
                 )}
             </div>
+
+            {/* Custom Confirm Send Modal */}
+            {confirmSendId && (
+                <div className="modal-backdrop">
+                    <div className="modal card">
+                        <h3>Send Campaign?</h3>
+                        <p>Are you sure you want to send this campaign to all active subscribers right now?</p>
+                        <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
+                            <button className="btn btn-ghost" onClick={() => setConfirmSendId(null)}>Cancel</button>
+                            <button className="btn btn-primary" onClick={() => handleSend(confirmSendId)}>Confirm Send</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Custom Confirm Delete Modal */}
+            {confirmDeleteId && (
+                <div className="modal-backdrop">
+                    <div className="modal card">
+                        <h3>Delete Campaign?</h3>
+                        <p>Are you sure you want to delete this campaign permanently?</p>
+                        <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
+                            <button className="btn btn-ghost" onClick={() => setConfirmDeleteId(null)}>Cancel</button>
+                            <button className="btn btn-danger" onClick={() => handleDelete(confirmDeleteId)}>Delete</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         .spinning { animation: spin 1s linear infinite; }
+        .modal-backdrop {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 1000;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .modal { width: 400px; max-width: 90%; }
       `}</style>
         </>
     );
