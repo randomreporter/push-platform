@@ -125,7 +125,7 @@ export async function dispatchCampaignInline(campaignId) {
                 delivered++;
                 await prisma.campaignLog.create({
                     data: { campaignId, subscriberId: sub.id, eventType: 'delivered', httpStatus: 201 }
-                }).catch(() => { });
+                }).catch((e) => { console.error('[Push] Log error:', e.message); });
                 await prisma.subscriber.update({
                     where: { id: sub.id },
                     data: { lastSeenAt: new Date() }

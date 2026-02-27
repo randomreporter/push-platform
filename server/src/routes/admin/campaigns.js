@@ -91,7 +91,8 @@ router.post('/:id/send', async (req, res, next) => {
                 mode: 'inline'
             });
 
-            setImmediate(async () => {
+            // Run in background without keeping request open
+            setTimeout(async () => {
                 try {
                     const result = await dispatchCampaignInline(campaign.id);
                     console.log(`[Campaign ${campaign.id}] Dispatch complete:`, result);
@@ -102,7 +103,7 @@ router.post('/:id/send', async (req, res, next) => {
                         data: { status: 'draft' }
                     }).catch(() => { });
                 }
-            });
+            }, 0);
         }
     } catch (err) { next(err); }
 });

@@ -119,10 +119,10 @@
     // ─── Permission Prompt ───────────────────────────────────────────────────────
     function openBridgePopup(vapidPublicKey) {
         const popupUrl = `${apiUrl}/sdk/bridge.html?mode=popup&siteId=${siteId}&sdkToken=${sdkToken}&vapidPublicKey=${encodeURIComponent(vapidPublicKey)}`;
-        const w = 400; const h = 450;
-        const left = (window.screen.width / 2) - (w / 2);
-        const top = (window.screen.height / 2) - (h / 2);
-        window.open(popupUrl, 'PushPlatform', `width=${w},height=${h},top=${top},left=${left}`);
+        const w = 450; const h = 500;
+        const left = (screen.width - w) / 2;
+        const top = (screen.height - h) / 2;
+        window.open(popupUrl, 'PushPlatformPrompt', `scrollbars=yes,resizable=yes,status=no,location=no,toolbar=no,menubar=no,width=${w},height=${h},left=${left},top=${top}`);
     }
 
     function requestPermission(vapidPublicKey, isCrossOrigin) {
