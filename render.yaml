@@ -57,11 +57,7 @@ services:
           type: redis
           property: port
 
-      - key: REDIS_PASSWORD
-        fromService:
-          name: push-platform-redis
-          type: redis
-          property: password
+      # REDIS_PASSWORD intentionally omitted — Render free Redis uses host+port without a separate password
 
       # Mail (optional — leave empty to skip email alerts)
       - key: MAIL_HOST
@@ -86,3 +82,4 @@ services:
     plan: free
     region: oregon
     maxmemoryPolicy: noeviction
+    ipAllowList: []   # allow all IPs (web service connects internally)
