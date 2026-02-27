@@ -7,7 +7,7 @@ const STEPS = ['Welcome', 'Admin Account', 'Confirm'];
 
 export default function Setup() {
     const [step, setStep] = useState(0);
-    const [form, setForm] = useState({ adminName: '', adminEmail: '', adminPassword: '', appUrl: 'http://localhost:3001' });
+    const [form, setForm] = useState({ adminName: '', adminEmail: '', adminPassword: '', appUrl: window.location.origin });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [done, setDone] = useState(false);
